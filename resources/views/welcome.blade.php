@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>RadioFall - Comic Stream</title>
+    <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -239,8 +240,8 @@
         <div onclick="toggleMobileMenu()"
             class="flex items-center gap-4 mb-0 md:mb-0 transform hover:-rotate-2 transition-transform cursor-pointer md:cursor-default w-full md:w-auto justify-center md:justify-start">
             <div
-                class="w-12 h-12 shrink-0 bg-black text-white rounded-full flex items-center justify-center border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.5)]">
-                <i class="fa-solid fa-radio text-xl animate-pulse"></i>
+                class="w-16 h-16 shrink-0 bg-white rounded-xl flex items-center justify-center border-4 border-black shadow-[6px_6px_0_0_#000] overflow-hidden transform group-hover:rotate-6 transition-transform">
+                <img src="{{ asset('logo.png') }}" alt="RadioFall Logo" class="w-full h-full object-cover">
             </div>
             <h1 class="text-4xl font-extrabold tracking-tight italic uppercase select-none"
                 style="text-shadow: 2px 2px 0px white;">
