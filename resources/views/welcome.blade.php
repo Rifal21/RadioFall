@@ -323,12 +323,22 @@
                             <i class="fa-solid fa-compact-disc text-6xl text-white"></i>
                         </div>
                         <div class="flex-grow text-center md:text-left">
-                            <div
-                                class="bg-black text-white px-3 py-1 mb-2 inline-block border-2 border-white transform -rotate-1 shadow-[4px_4px_0_0_#fbbf24]">
-                                <h3 class="text-sm md:text-md font-bold uppercase tracking-widest"><i
-                                        class="fa-solid fa-tower-broadcast mr-2 animate-pulse text-red-500"></i>LIVE ON
-                                    AIR
-                                </h3>
+                            <div class="flex flex-wrap justify-center md:justify-start gap-3 mb-2">
+                                <div
+                                    class="bg-black text-white px-3 py-1 inline-block border-2 border-white transform -rotate-1 shadow-[4px_4px_0_0_#fbbf24]">
+                                    <h3 class="text-sm md:text-md font-bold uppercase tracking-widest"><i
+                                            class="fa-solid fa-tower-broadcast mr-2 animate-pulse text-red-500"></i>LIVE
+                                        ON
+                                        AIR
+                                    </h3>
+                                </div>
+                                <div
+                                    class="bg-white text-black px-3 py-1 inline-block border-2 border-black transform rotate-1 shadow-[4px_4px_0_0_#06b6d4]">
+                                    <h3 class="text-sm md:text-md font-bold uppercase tracking-widest">
+                                        <i class="fa-solid fa-headset mr-2 text-blue-500"></i><span
+                                            id="listener-count">0</span> LISTENERS
+                                    </h3>
+                                </div>
                             </div>
                             <p class="text-black font-black text-2xl italic uppercase leading-none">RadioFall Station
                             </p>
@@ -1046,7 +1056,15 @@
                 fetch('https://radio.fkstudio.my.id/api/nowplaying/radio_fkstudio')
                     .then(response => response.json())
                     .then(data => {
+                        console.log(data);
                         const marquee = document.getElementById('digital-marquee-text');
+                        const listenerEl = document.getElementById('listener-count');
+
+                        // Update Listeners
+                        if (data && data.listeners) {
+                            listenerEl.innerText = data.listeners.total || 0;
+                        }
+
                         if (data && data.now_playing && data.now_playing.song) {
                             const song = data.now_playing.song;
                             const text = `${song.artist} - ${song.title}`;
