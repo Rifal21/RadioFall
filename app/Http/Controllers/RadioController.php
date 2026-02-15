@@ -160,9 +160,16 @@ class RadioController extends Controller
 
     public function getActiveCharacters()
     {
-        // For simplicity, users who have a character set
-        // In a real app, you'd filter by "recent activity"
+        // Update current user's last seen if logged in
+        if (Auth::check()) {
+            $user = Auth::user();
+            $user->last_seen_at = now();
+            $user->save();
+        }
+
+        // Only show users who were active in the last 30 seconds
         $users = \App\Models\User::whereNotNull('pixel_character')
+            ->where('last_seen_at', '>=', now()->subSeconds(30))
             ->select('id', 'name', 'pixel_character', 'pixel_weapon')
             ->get();
 
