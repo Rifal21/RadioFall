@@ -602,7 +602,7 @@
                     </div>
 
                     <!-- Hidden Audio -->
-                    <audio id="audio-player" class="hidden"
+                    <audio id="audio-player" class="hidden" crossorigin="anonymous"
                         src="https://radio.fkstudio.my.id/listen/radio_fkstudio/radio.mp3"></audio>
                 </div>
 
@@ -1317,7 +1317,23 @@
             // Play/Pause Toggle
             playBtn.addEventListener('click', () => {
                 if (audioPlayer.paused) {
-                    audioPlayer.play();
+                    // Force reload to sync with live stream
+                    const streamUrl = audioPlayer.src.split('?')[0];
+                    audioPlayer.src = `${streamUrl}?t=${Date.now()}`;
+                    audioPlayer.load();
+
+                    audioPlayer.play().catch(e => {
+                        console.error("Playback failed:", e);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Playback Error',
+                            text: 'Could not start audio stream. Try refreshing.',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    });
                 } else {
                     audioPlayer.pause();
                 }
@@ -1348,8 +1364,14 @@
 
             // Volume Slider Control
             volumeSlider.addEventListener('input', (e) => {
-                const value = e.target.value;
+                const value = parseFloat(e.target.value);
                 audioPlayer.volume = value;
+
+                // Ensure we unmute if the user drags the slider up
+                if (value > 0 && audioPlayer.muted) {
+                    audioPlayer.muted = false;
+                }
+
                 updateVolumeIcon(value);
             });
 
@@ -1357,10 +1379,16 @@
             muteBtn.addEventListener('click', () => {
                 if (audioPlayer.muted) {
                     audioPlayer.muted = false;
-                    volumeSlider.value = audioPlayer.volume;
-                    updateVolumeIcon(audioPlayer.volume);
+                    // Restore volume to slider value or default to 1 if slider is 0
+                    let vol = parseFloat(volumeSlider.value);
+                    if (vol === 0) vol = 1;
+
+                    audioPlayer.volume = vol;
+                    volumeSlider.value = vol;
+                    updateVolumeIcon(vol);
                 } else {
                     audioPlayer.muted = true;
+                    // Don't change actual volume, just the slider visual
                     volumeSlider.value = 0;
                     updateVolumeIcon(0);
                 }
@@ -1368,7 +1396,7 @@
 
             function updateVolumeIcon(vol) {
                 volumeIcon.className = ''; // Clear classes
-                if (vol == 0) {
+                if (audioPlayer.muted || vol == 0) {
                     volumeIcon.className = 'fa-solid fa-volume-xmark text-xl';
                 } else if (vol < 0.5) {
                     volumeIcon.className = 'fa-solid fa-volume-low text-xl';
@@ -1376,6 +1404,48 @@
                     volumeIcon.className = 'fa-solid fa-volume-high text-xl';
                 }
             }
+
+            // Error Handling for Audio Player
+            audioPlayer.addEventListener('error', (e) => {
+                console.error('Audio Player Error:', e);
+                // Try to reload the source with a cache buster if it fails
+                const currentSrc = audioPlayer.src.split('?')[0];
+                console.log('Retrying stream connection...');
+
+                // Only retry once to avoid infinite loops if server is down (basic implementation)
+                if (!audioPlayer.dataset.retried) {
+                    audioPlayer.dataset.retried = "true";
+                    audioPlayer.src = currentSrc + '?t=' + new Date().getTime();
+                    audioPlayer.load();
+                    if (!audioPlayer.paused) audioPlayer.play();
+
+                    // Notify user
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                    Toast.fire({
+                        icon: 'info',
+                        title: 'Reconnecting to stream...'
+                    });
+                } else {
+                    // If it fails again
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 5000,
+                        timerProgressBar: true
+                    });
+                    Toast.fire({
+                        icon: 'error',
+                        title: 'Stream currently unavailable'
+                    });
+                }
+            });
 
             // Fake Visualizer Loop
             function animateVisualizer() {
