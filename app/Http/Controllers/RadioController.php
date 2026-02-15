@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Message;
 use App\Models\SongRequest;
 
@@ -69,9 +70,10 @@ class RadioController extends Controller
             'message' => 'required|string|max:1000',
         ]);
 
+        $user = Auth::user();
         $message = Message::create([
-            'sender_name' => auth()->user()->name,
-            'sender_avatar' => auth()->user()->avatar,
+            'sender_name' => $user->name,
+            'sender_avatar' => $user->avatar,
             'message' => $request->message,
         ]);
 
@@ -137,5 +139,33 @@ class RadioController extends Controller
         $this->syncRequestStatuses();
         $requests = SongRequest::where('status', 'pending')->latest()->take(5)->get();
         return response()->json($requests);
+    }
+
+    public function updateCharacter(Request $request)
+    {
+        $request->validate([
+            'character' => 'required|string',
+            'weapon' => 'nullable|string',
+        ]);
+
+        $user = auth()->user();
+        $user->pixel_character = $request->character;
+        if ($request->has('weapon')) {
+            $user->pixel_weapon = $request->weapon;
+        }
+        $user->save();
+
+        return response()->json(['success' => true]);
+    }
+
+    public function getActiveCharacters()
+    {
+        // For simplicity, users who have a character set
+        // In a real app, you'd filter by "recent activity"
+        $users = \App\Models\User::whereNotNull('pixel_character')
+            ->select('id', 'name', 'pixel_character', 'pixel_weapon')
+            ->get();
+
+        return response()->json($users);
     }
 }

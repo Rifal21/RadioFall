@@ -228,6 +228,99 @@
         .animate-fade-in {
             animation: fadeIn 0.3s ease-out forwards;
         }
+
+        .battle-arena {
+            background-image: url('/konoha.png');
+            background-size: cover;
+            /* Maintain aspect ratio */
+            background-position: center;
+            background-color: #87CEEB;
+            image-rendering: pixelated;
+            border: 4px solid black;
+            height: 400px;
+            /* Taller but reasonable */
+        }
+
+        .pixel-character-wrapper {
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+        }
+
+        .pixel-weapon {
+            position: absolute;
+            right: -10px;
+            bottom: 10px;
+            font-size: 18px;
+            filter: drop-shadow(2px 2px 0 black);
+            animation: weapon-float 1s ease-in-out infinite;
+        }
+
+        @keyframes weapon-float {
+
+            0%,
+            100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            50% {
+                transform: translate(-2px, -5px) rotate(-10deg);
+            }
+        }
+
+        .pixel-character {
+            image-rendering: pixelated;
+            transition: all 0.5s linear;
+            filter: contrast(110%) brightness(105%);
+        }
+
+        .pixel-character:hover {
+            filter: drop-shadow(4px 4px 0 rgba(0, 0, 0, 1));
+            transform: scale(1.1);
+        }
+
+        @keyframes pixel-bounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .pixel-bounce {
+            animation: pixel-bounce 0.5s infinite;
+        }
+
+        .arena-bubble {
+            position: absolute;
+            bottom: 100%;
+            margin-bottom: 30px;
+            background: white;
+            border: 3px solid black;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 800;
+            white-space: nowrap;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+            z-index: 100;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        .arena-bubble::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: black;
+        }
     </style>
 </head>
 
@@ -653,6 +746,32 @@
             </div>
     </main>
 
+    <!-- Pixel Battle Arena -->
+    <div class="mt-8 neo-box bg-white rounded-xl overflow-hidden border-4 border-black shadow-[10px_10px_0_0_black]">
+        <div class="bg-purple-600 p-4 border-b-4 border-black flex justify-between items-center text-white">
+            <h3 class="font-black text-2xl uppercase italic tracking-wider flex items-center gap-3">
+                <i class="fa-solid fa-gamepad"></i> Pixel Battle Zone
+            </h3>
+            @auth
+                <button onclick="openCharacterPicker()"
+                    class="neo-btn bg-yellow-400 hover:bg-yellow-300 text-black font-black py-2 px-4 rounded-lg text-xs uppercase tracking-wide flex items-center gap-2">
+                    <i class="fa-solid fa-user-ninja"></i> Choose Fighter
+                </button>
+            @else
+                <span class="text-xs font-bold uppercase italic">Login to join the battle!</span>
+            @endauth
+        </div>
+        <div id="battle-arena" class="battle-arena relative overflow-hidden p-4 border-t-4 border-black">
+            <!-- Characters will be injected here -->
+            <!-- Characters will be injected here -->
+            <div id="arena-placeholder"
+                class="absolute inset-x-0 top-10 flex flex-col items-center opacity-40 pointer-events-none">
+                <p class="font-black text-6xl uppercase select-none text-white outline-black"
+                    style="-webkit-text-stroke: 2px black;"></p>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="mt-8 text-center font-bold text-gray-400 uppercase tracking-widest text-xs">
         &copy; 2026 RadioFall <i class="fa-solid fa-bolt mx-1"></i> Stay Tuned <i class="fa-solid fa-bolt mx-1"></i>
@@ -699,6 +818,198 @@
                 }
             });
         }
+
+        // Pixel Battle Logic
+        let characters = [];
+        const arena = document.getElementById('battle-arena');
+        const availableSeeds = ['naruto', 'sasuke', 'kakashi', 'sakura', 'cap', 'thor', 'ironman', 'spiderman', 'hulk'];
+        const weaponIcons = {
+            'Kunai': 'fa-solid fa-shredder', // Close enough
+            'Katana': 'fa-solid fa-sword',
+            'Shuriken': 'fa-solid fa-clover', // Close enough
+            'Staff': 'fa-solid fa-staff-snake',
+            'Scroll': 'fa-solid fa-scroll'
+        };
+        const weapons = ['Kunai', 'Katana', 'Shuriken', 'Staff', 'Scroll'];
+        let selectedSeed = '';
+
+        function fetchActiveCharacters() {
+            fetch('/api-characters')
+                .then(res => res.json())
+                .then(data => {
+                    updateArena(data);
+                });
+        }
+
+        function updateArena(data) {
+            const container = document.getElementById('battle-arena');
+            const currentIds = data.map(u => u.id);
+
+            document.querySelectorAll('.pixel-character-wrapper').forEach(el => {
+                if (!currentIds.includes(parseInt(el.dataset.userId))) {
+                    el.remove();
+                }
+            });
+
+            data.forEach(user => {
+                let el = document.querySelector(`.pixel-character-wrapper[data-user-id="${user.id}"]`);
+                if (!el) {
+                    el = document.createElement('div');
+                    el.className =
+                        'pixel-character-wrapper absolute flex flex-col items-center transition-all duration-1000 z-10';
+                    el.dataset.userId = user.id;
+                    el.dataset.userName = user.name;
+                    el.style.left = Math.random() * 80 + 10 + '%';
+                    el.style.top = Math.random() * 20 + 45 + '%'; // 45% to 65% ensures feet stay visible
+                    el.style.zIndex = Math.floor(parseFloat(el.style.top));
+
+                    const nameTag = document.createElement('span');
+                    nameTag.className =
+                        'text-[10px] font-black uppercase bg-red-600 text-white px-2 py-0.5 rounded border-2 border-black mb-1 whitespace-nowrap shadow-[3px_3px_0_0_black]';
+                    nameTag.innerText = user.name;
+
+                    const img = document.createElement('img');
+                    let charName = availableSeeds.includes(user.pixel_character) ? user.pixel_character : 'naruto';
+                    img.src = `/characters/${charName}.png`;
+                    img.className = 'pixel-character w-32 h-32 pixel-bounce cursor-pointer object-contain';
+                    img.onerror = () => {
+                        img.src = '/characters/naruto.png';
+                    };
+                    img.onclick = () => emoteAction(user.id);
+
+                    const weaponContainer = document.createElement('div');
+                    weaponContainer.className = 'pixel-weapon';
+                    const wIcon = weaponIcons[user.pixel_weapon] || 'fa-solid fa-star';
+                    weaponContainer.innerHTML = `<i class="${wIcon} text-white"></i>`;
+
+                    el.appendChild(nameTag);
+                    el.appendChild(img);
+                    el.appendChild(weaponContainer);
+                    container.appendChild(el);
+                } else {
+                    // Update weapon if changed
+                    const wWrap = el.querySelector('.pixel-weapon');
+                    const wIcon = weaponIcons[user.pixel_weapon] || 'fa-solid fa-star';
+                    if (wWrap.innerHTML.indexOf(wIcon) === -1) {
+                        wWrap.innerHTML = `<i class="${wIcon} text-white"></i>`;
+                    }
+                    // Update character image if changed
+                    const img = el.querySelector('.pixel-character');
+                    let charName = availableSeeds.includes(user.pixel_character) ? user.pixel_character : 'naruto';
+                    let newSrc = `/characters/${charName}.png`;
+                    if (!img.src.includes(newSrc)) {
+                        img.src = newSrc;
+                    }
+                }
+            });
+        }
+
+        function emoteAction(userId) {
+            const el = document.querySelector(`.pixel-character-wrapper[data-user-id="${userId}"]`);
+            if (el) {
+                el.classList.add('scale-150', '-rotate-12');
+                setTimeout(() => el.classList.remove('scale-150', '-rotate-12'), 500);
+            }
+        }
+
+        function moveCharacters() {
+            document.querySelectorAll('.pixel-character-wrapper').forEach(el => {
+                const currentLeft = parseFloat(el.style.left);
+                const currentTop = parseFloat(el.style.top);
+
+                let newLeft = currentLeft + (Math.random() - 0.5) * 5;
+                let newTop = currentTop + (Math.random() - 0.5) * 5;
+
+                if (newLeft < 5) newLeft = 10;
+                if (newLeft > 90) newLeft = 85;
+                if (newTop < 45) newTop = 45; // Below roofs
+                if (newTop > 65) newTop = 65; // Above bottom line
+
+                el.style.left = newLeft + '%';
+                el.style.top = newTop + '%';
+                el.style.zIndex = Math.floor(newTop);
+            });
+        }
+
+        function openCharacterPicker() {
+            let optionsHtml = '<p class="font-black uppercase mb-4 text-gray-500">Pick Your Ninja</p>';
+            optionsHtml += '<div class="grid grid-cols-5 gap-3 p-2">';
+            availableSeeds.forEach(seed => {
+                optionsHtml += `
+                    <div onclick="selectedSeed='${seed}'; openWeaponPicker()" class="cursor-pointer p-2 border-2 border-black hover:bg-red-100 transition-all rounded-xl flex flex-col items-center gap-2 group shadow-[4px_4px_0_0_black] bg-white">
+                        <img src="/characters/${seed}.png" class="w-16 h-16 group-hover:scale-110 object-contain">
+                        <span class="font-black text-[10px] uppercase">${seed}</span>
+                    </div>
+                `;
+            });
+            optionsHtml += '</div>';
+
+            Swal.fire({
+                title: 'NINJA REGISTRATION',
+                html: optionsHtml,
+                showConfirmButton: false,
+                background: '#fff',
+                customClass: {
+                    popup: 'border-4 border-black shadow-[10px_10px_0_0_black] rounded-xl'
+                }
+            });
+        }
+
+        function openWeaponPicker() {
+            let optionsHtml = `<p class="font-black uppercase mb-4 text-gray-500">Equip Weapon for ${selectedSeed}</p>`;
+            optionsHtml += '<div class="grid grid-cols-3 gap-4 p-4">';
+            weapons.forEach(w => {
+                const wIcon = weaponIcons[w];
+                optionsHtml += `
+                    <div onclick="selectFinalCharacter('${selectedSeed}', '${w}')" class="cursor-pointer p-4 border-4 border-black hover:bg-yellow-100 transition-all rounded-xl flex flex-col items-center gap-2 group shadow-[6px_6px_0_0_black]">
+                        <i class="${wIcon} text-3xl"></i>
+                        <span class="font-black text-xs uppercase">${w}</span>
+                    </div>
+                `;
+            });
+            optionsHtml += '</div>';
+
+            Swal.fire({
+                title: 'WEAPON ARMORY',
+                html: optionsHtml,
+                showConfirmButton: false,
+                background: '#fff',
+                customClass: {
+                    popup: 'border-4 border-black shadow-[10px_10px_0_0_black] rounded-xl'
+                }
+            });
+        }
+
+        function selectFinalCharacter(seed, weapon) {
+            fetch('/user/character', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        character: seed,
+                        weapon: weapon
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'NINJA READY!',
+                            text: 'You have entered the Konoha Arena.',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        fetchActiveCharacters();
+                    }
+                });
+        }
+
+        setInterval(fetchActiveCharacters, 5000);
+        setInterval(moveCharacters, 3000);
+        fetchActiveCharacters();
 
         const songs = @json($songs);
         let chatContainer = document.getElementById('chat-container');
@@ -937,7 +1248,7 @@
                             `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender_name)}`;
 
                         html += `
-                        <div class="flex flex-col group animate-fade-in">
+                        <div class="flex flex-col group animate-fade-in" data-msg-id="${msg.id}">
                             <div class="flex items-center gap-2 mb-1 ml-2 self-start">
                                 <img src="${avatar}" class="w-5 h-5 rounded-full border-1 border-black shadow-[1px_1px_0_0_black]" alt="avatar">
                                 <span class="text-xs font-black text-black bg-yellow-300 inline-block px-2 border-2 border-black -rotate-1 shadow-[2px_2px_0_0_black]">${msg.sender_name}</span>
@@ -951,12 +1262,44 @@
                     });
 
                     if (chatContainer.innerHTML !== html) {
+                        const oldMessages = Array.from(chatContainer.querySelectorAll('[data-msg-id]')).map(el => el
+                            .dataset.msgId);
                         chatContainer.innerHTML = html;
+
+                        // Detect and trigger bubbles for new messages
+                        data.forEach(msg => {
+                            if (!oldMessages.includes(msg.id.toString())) {
+                                showArenaBubble(msg.sender_name, msg.message);
+                            }
+                        });
+
                         if (wasAtBottom) {
                             chatContainer.scrollTop = chatContainer.scrollHeight;
                         }
                     }
                 });
+        }
+
+        function showArenaBubble(userName, message) {
+            const charEl = document.querySelector(`.pixel-character-wrapper[data-user-name="${userName}"]`);
+            if (charEl) {
+                // Remove existing bubble if any
+                const oldBubble = charEl.querySelector('.arena-bubble');
+                if (oldBubble) oldBubble.remove();
+
+                const bubble = document.createElement('div');
+                bubble.className = 'arena-bubble';
+                bubble.innerText = message;
+                charEl.appendChild(bubble);
+
+                // Emote action
+                charEl.classList.add('scale-125');
+
+                setTimeout(() => {
+                    bubble.remove();
+                    charEl.classList.remove('scale-125');
+                }, 5000); // Hide after 5 seconds
+            }
         }
 
         setInterval(fetchMessages, 3000);

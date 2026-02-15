@@ -13,7 +13,10 @@ Route::get('/request/list', [App\Http\Controllers\RadioController::class, 'getRe
 Route::middleware('auth')->group(function () {
     Route::post('/chat', [App\Http\Controllers\RadioController::class, 'sendMessage']);
     Route::post('/request', [App\Http\Controllers\RadioController::class, 'requestSong']);
+    Route::post('/user/character', [App\Http\Controllers\RadioController::class, 'updateCharacter']);
 });
+
+Route::get('/api-characters', [App\Http\Controllers\RadioController::class, 'getActiveCharacters']);
 
 // Google Auth Routes
 Route::get('auth/google', [App\Http\Controllers\Auth\SocialiteController::class, 'redirectToGoogle'])->name('auth.google');
